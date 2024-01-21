@@ -2830,91 +2830,19 @@ void Graph::deleteLink(ed::LinkId deletedLinkId)
 
 void Graph::deleteNode(UiNodePtr node)
 {
-    // Delete link
     for (UiPinPtr inputPin : node->inputPins)
     {
-        UiNodePtr upNode = node->getConnectedNode(inputPin->_name);
-        if (upNode)
+        for (UiPinPtr pin : inputPin.get()->getConnections())
         {
-            upNode->removeOutputConnection(node->getName());
-            int num = node->getEdgeIndex(upNode->getId(), inputPin);
-
-            // Erase edge between node and up node
-            if (num != -1)
-            {
-                if (node->edges.size() == 1)
-                {
-                    node->edges.erase(node->edges.begin() + 0);
-                }
-                else if (node->edges.size() > 1)
-                {
-                    node->edges.erase(node->edges.begin() + num);
-                }
-            }
+            deleteLinkInfo(pin->_pinId.Get(), inputPin->_pinId.Get());
         }
     }
 
     for (UiPinPtr outputPin : node->outputPins)
     {
-        // Update downNode info
         for (UiPinPtr pin : outputPin.get()->getConnections())
         {
-            mx::ValuePtr val;
-            if (pin->_pinNode->getNode())
-            {
-                mx::NodeDefPtr nodeDef = pin->_pinNode->getNode()->getNodeDef(pin->_pinNode->getNode()->getName());
-                val = nodeDef->getActiveInput(pin->_input->getName())->getValue();
-                if (pin->_pinNode->getNode()->getType() == mx::SURFACE_SHADER_TYPE_STRING)
-                {
-                    pin->_input->setConnectedOutput(nullptr);
-                }
-                else
-                {
-                    pin->_input->setConnectedNode(nullptr);
-                }
-                if (node->getInput())
-                {
-                    // Remove interface value in order to set the default of the input
-                    pin->_input->removeAttribute(mx::ValueElement::INTERFACE_NAME_ATTRIBUTE);
-                    setDefaults(pin->_input);
-                    setDefaults(node->getInput());
-                }
-            }
-            else if (pin->_pinNode->getNodeGraph())
-            {
-                if (node->getInput())
-                {
-                    pin->_pinNode->getNodeGraph()->getInput(pin->_name)->removeAttribute(mx::ValueElement::INTERFACE_NAME_ATTRIBUTE);
-                    setDefaults(node->getInput());
-                }
-                pin->_input->setConnectedNode(nullptr);
-                pin->setConnected(false);
-                setDefaults(pin->_input);
-            }
-
-            pin->setConnected(false);
-            if (val)
-            {
-                pin->_input->setValueString(val->getValueString());
-            }
-
-            int num = pin->_pinNode->getEdgeIndex(node->getId(), pin);
-            if (num != -1)
-            {
-                if (pin->_pinNode->edges.size() == 1)
-                {
-                    pin->_pinNode->edges.erase(pin->_pinNode->edges.begin() + 0);
-                }
-                else if (pin->_pinNode->edges.size() > 1)
-                {
-                    pin->_pinNode->edges.erase(pin->_pinNode->edges.begin() + num);
-                }
-            }
-
-            pin->_pinNode->setInputNodeNum(-1);
-
-            // Not really necessary since it will be deleted
-            node->removeOutputConnection(pin->_pinNode->getName());
+            deleteLinkInfo(outputPin->_pinId.Get(), pin->_pinId.Get());
         }
     }
 
